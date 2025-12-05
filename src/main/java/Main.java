@@ -22,9 +22,9 @@ public class Main {
             if (command.startsWith("type")){
                 String typeArg = command.substring(5).trim();
                 if (typeArg.equals("echo")|| typeArg.equals("type")|| typeArg.equals("exit")){
-                    System.out.println(typeArg + " is a built-in command");
+                    System.out.println(typeArg + " is a shell builtin");
                 } else {
-                    System.out.println(typeArg + " is an unknown command");
+                    System.out.println(typeArg + ": not found");
                 }
             }
             System.out.println(command+": command not found");
