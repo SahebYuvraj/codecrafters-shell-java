@@ -23,8 +23,10 @@ public class Main {
                 String typeArg = command.substring(5).trim();
                 if (typeArg.equals("echo")|| typeArg.equals("type")|| typeArg.equals("exit")){
                     System.out.println(typeArg + " is a shell builtin");
+                    continue;
                 } else {
                     System.out.println(typeArg + ": not found");
+                    continue;
                 }
             }
             System.out.println(command+": command not found");
