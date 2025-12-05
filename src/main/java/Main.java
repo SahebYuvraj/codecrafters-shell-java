@@ -13,6 +13,12 @@ public class Main {
             String command = scanner.nextLine();
             
             if (command.equals("exit")) break;
+
+            if(command.startsWith("echo ")) {
+                String message = command.substring(5);
+                System.out.println(message);
+                continue;
+            }
             System.out.println(command+": command not found");
 
             
