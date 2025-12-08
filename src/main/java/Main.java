@@ -1,5 +1,6 @@
 import java.io.File;
 import java.util.Scanner;
+import 
 
 public class Main {
 
@@ -49,7 +50,8 @@ public class Main {
                     typeCommand(commandParts);
                     break;
                 default:
-                    System.out.println(command + ": command not found");
+                    externalCommnad(commandParts);
+                    // System.out.println(command + ": command not found");
                     break;
             }
             
@@ -96,6 +98,7 @@ public class Main {
                 File commandFile = new File(dir, secondaryCommand);
                 // check if it has execute permissions
                 if(commandFile.exists() && commandFile.canExecute()){
+                    
                     System.out.println(secondaryCommand + " is " + commandFile.getAbsolutePath());
                     return;
                 }
@@ -104,7 +107,35 @@ public class Main {
             
         }
     }
+    
+    private static void externalCommnad(String[] commandParts){
+        String executable = commandParts[0];
+        String pathEnv = System.getenv("PATH"); // im assuming this gets path from 
+        String[] paths = pathEnv.split(System.getProperty("path.separator"));
+        for(String path:paths){
+            File dir = new File(path);
+            File commandFile = new File (dir, commandParts[0]);
+            if(commandFile.exists() && commandFile.canExecute()){
+                try {
+                    Process process = Runtime.getRuntime().exec(commandParts);
+                    //output this
+                    process.getInputStream().transferTo(System.out);
+                    process.getErrorStream().transferTo(System.err);
 
+                    process.waitFor();
+                    return;
+
+                } catch (Exception e) {
+                    System.err.println(e.getMessage());
+                    return;
+                }
+            }
+            
+        }
+        System.out.println(executable + ": command not found");
+            
+        
+    }
 
 
 
