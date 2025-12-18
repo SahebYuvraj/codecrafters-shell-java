@@ -58,6 +58,7 @@ public class Main {
                     break;
                 case CD_COMMAND:
                     cd_command(commandParts);
+                    break;
                 default:
                     externalCommnad(commandParts);
                     break;
