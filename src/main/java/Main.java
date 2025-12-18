@@ -161,22 +161,16 @@ public class Main {
         }
 
         String path = commandParts[1];
-        // File dir = new File(path);
-        // if(!dir.exists() || !dir.isDirectory()){
-        //     System.out.println("cd: no such file or directory: " + path);
-        //     return;
-        // }
-        // System.setProperty("user.dir", dir.getAbsolutePath()); // this sets the system property to absolute directory
-
-
         if(path.startsWith("/")){ absolutepath(path);}
+
         else if (path.startsWith("./")){// this path 
             String current_directory = System.getProperty("user.dir");
             String new_path = current_directory + path.substring(1);
             absolutepath(new_path);
             }
-        else if (path.startsWith("../")){ 
-            parentrelativedir(path);
+        else if (path.startsWith("../")){
+            String current_directory = System.getProperty("user.dir"); 
+            parentrelativedir(current_directory,path);
             //previous directory
         }
         else if (path.startsWith("~")){
@@ -202,18 +196,16 @@ public class Main {
 
     }
 
-    private static void parentrelativedir(String path){
-        int count = 2;
-        while (path.startsWith("../")){
-            String current_directory = System.getProperty("user.dir");
+    private static void parentrelativedir(String current_directory, String path){
+
+        if (path.startsWith("../")){
+
             File currDirFile = new File(current_directory);
             String parent_directory = currDirFile.getParent();
-            String new_path = parent_directory + path.substring(2);
-            path = new_path;
-            count+=3;
-            
+
+            parentrelativedir(parent_directory, path.substring(3));     
         }
-        String new_path = path + path.substring(count);
+        String new_path = current_directory + path.substring(0);
         absolutepath(path);
 
 
