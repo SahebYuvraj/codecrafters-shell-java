@@ -164,7 +164,7 @@ public class Main {
         String path = commandParts[1];
 
         if(path.startsWith("~")){
-            path = System.getProperty("user.home") + path.substring(1);}
+            path = System.getProperty("user.home") ;}
 
         if (new File(path).isAbsolute()) {
             target = new File(path);
