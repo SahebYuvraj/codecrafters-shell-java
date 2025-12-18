@@ -155,60 +155,37 @@ public class Main {
     }
 
     private static void cd_command(String[] commandParts){
+        File target;
         if(commandParts.length != 2){
             System.out.println("cd: invalid number of arguments");
             return;
         }
 
         String path = commandParts[1];
-        if(path.startsWith("/")){ absolutepath(path);}
 
-        else if (path.startsWith("./")){// this path 
-            String current_directory = System.getProperty("user.dir");
-            String new_path = current_directory + path.substring(1);
-            absolutepath(new_path);
+        if(path.startsWith("~")){
+            path = System.getProperty("user.home") + path.substring(1);}
+
+        if (new File(path).isAbsolute()) {
+            target = new File(path);
+        }
+        else {
+            String currentDir = System.getProperty("user.dir");
+            target = new File(currentDir, path);
+        }
+
+        try{
+            File CanonicalFile = target.getCanonicalFile();
+            if(!CanonicalFile.exists() || !CanonicalFile.isDirectory()){
+                System.out.println("cd: no such file or directory: " + path);
+                return;
+            
             }
-        else if (path.startsWith("../")){
-            String current_directory = System.getProperty("user.dir"); 
-            parentrelativedir(current_directory,path);
-            //previous directory
+            System.setProperty("user.dir", CanonicalFile.getAbsolutePath());
+        } 
+        catch (Exception e){
+            System.out.println("cd: error changing directory: " + e.getMessage());
         }
-        else if (path.startsWith("~")){
-            String home_directory = System.getProperty("user.home");
-            String new_path = home_directory + path.substring(1);
-            absolutepath(new_path);
-            // home directory
-        }
-        // // relative paths
-        // so absolute is /
-        // relative is ./ or ../
-        // home ditectory is ~
-
-
     }
-    private static void absolutepath(String path){
-        File dir = new File(path);
-        if(!dir.exists() || !dir.isDirectory()){
-            System.out.println("cd: no such file or directory: " + path);
-            return;
-        }
-        System.setProperty("user.dir", dir.getAbsolutePath()); // this sets the system property to absolute directory
-
-    }
-
-    private static void parentrelativedir(String current_directory, String path){
-
-        if (path.startsWith("../")){
-
-            File currDirFile = new File(current_directory);
-            String parent_directory = currDirFile.getParent();
-
-            parentrelativedir(parent_directory, path.substring(3));     
-        }
-        String new_path = current_directory + path.substring(0);
-        absolutepath(path);
-
-
-    }
-
+   
 }
