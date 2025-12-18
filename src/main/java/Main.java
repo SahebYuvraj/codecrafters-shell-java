@@ -161,12 +161,49 @@ public class Main {
         }
 
         String path = commandParts[1];
+        // File dir = new File(path);
+        // if(!dir.exists() || !dir.isDirectory()){
+        //     System.out.println("cd: no such file or directory: " + path);
+        //     return;
+        // }
+        // System.setProperty("user.dir", dir.getAbsolutePath()); // this sets the system property to absolute directory
+
+
+        if(path.startsWith("/")){ absolutepath(path);}
+        else if (path.startsWith("./")){// this path 
+            String current_directory = System.getProperty("user.dir");
+            String new_path = current_directory + path.substring(1);
+            absolutepath(new_path);
+            }
+        else if (path.startsWith("../")){ 
+            String current_directory = System.getProperty("user.dir");
+            File currDirFile = new File(current_directory);
+            String parent_directory = currDirFile.getParent();
+            String new_path = parent_directory + path.substring(2);;
+            absolutepath(new_path);
+            //previous directory
+        }
+        else if (path.startsWith("~")){
+            String home_directory = System.getProperty("user.home");
+            String new_path = home_directory + path.substring(1);
+            absolutepath(new_path);
+            // home directory
+        }
+        // // relative paths
+        // so absolute is /
+        // relative is ./ or ../
+        // home ditectory is ~
+
+
+    }
+    private static void absolutepath(String path){
         File dir = new File(path);
         if(!dir.exists() || !dir.isDirectory()){
             System.out.println("cd: no such file or directory: " + path);
             return;
         }
-        System.setProperty("user.dir", dir.getAbsolutePath());
+        System.setProperty("user.dir", dir.getAbsolutePath()); // this sets the system property to absolute directory
+
     }
 
 }
