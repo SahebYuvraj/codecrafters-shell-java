@@ -24,7 +24,8 @@ public class Main {
     private static final String ECHO_COMMAND = "echo";
     private static final String TYPE_COMMAND = "type";
     private static final String PWD_COMMAND = "pwd";
-    private static final List<String> shellBullitin = List.of(PWD_COMMAND,EXIT_COMMAND,ECHO_COMMAND,TYPE_COMMAND);
+    private static final String CD_COMMAND = "cd";
+    private static final List<String> shellBullitin = List.of(PWD_COMMAND,EXIT_COMMAND,ECHO_COMMAND,TYPE_COMMAND,CD_COMMAND);
    
 
     public static void main(String[] args) throws Exception {
@@ -55,6 +56,8 @@ public class Main {
                 case PWD_COMMAND:
                     pwd_command();
                     break;
+                case CD_COMMAND:
+                    cd_command(commandParts);
                 default:
                     externalCommnad(commandParts);
                     break;
@@ -148,6 +151,21 @@ public class Main {
     private static void  pwd_command(){
         // so the shell always has a current working directory tracked by the OS.
         System.out.println(System.getProperty("user.dir"));
+    }
+
+    private static void cd_command(String[] commandParts){
+        if(commandParts.length != 2){
+            System.out.println("cd: invalid number of arguments");
+            return;
+        }
+
+        String path = commandParts[1];
+        File dir = new File(path);
+        if(!dir.exists() || !dir.isDirectory()){
+            System.out.println("cd: no such file or directory: " + path);
+            return;
+        }
+        System.setProperty("user.dir", dir.getAbsolutePath());
     }
 
 }
