@@ -184,7 +184,7 @@ public class Main {
             System.setProperty("user.dir", CanonicalFile.getAbsolutePath());
         } 
         catch (Exception e){
-            System.out.println("cd: error changing directory: " + e.getMessage());
+            System.out.println("cd: error changing directory: " + e.getMessage()); 
         }
     }
    
