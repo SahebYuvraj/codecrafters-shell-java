@@ -164,7 +164,9 @@ public class Main {
         String path = commandParts[1];
 
         if(path.startsWith("~")){
-            path = System.getProperty("user.home") ;}
+            // path = System.getProperty("user.home") ;}
+            path = System.getenv("HOME");
+            // expand ~ to home directory this would fail in java since it doesnt expand to home env vairable
 
         if (new File(path).isAbsolute()) {
             target = new File(path);
