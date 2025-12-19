@@ -203,6 +203,10 @@ public class Main {
             char c = input.charAt(i);
 
             if(c == '\''){
+                if(insideDoubleQuote) {
+                    currentPart.append(c);
+                    continue;
+                }
                 insideSingleQuote = !insideSingleQuote;
                 continue;
             }
