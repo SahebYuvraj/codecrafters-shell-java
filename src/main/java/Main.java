@@ -220,7 +220,7 @@ public class Main {
             if(c == '\\'){
                 if(i + 1 < input.length()){
                     char nextChar = input.charAt(i + 1);
-                    if(insideSingleQuote){
+                    if(insideSingleQuote || insideDoubleQuote){
                         currentPart.append(c);
                     } else {
                         currentPart.append(nextChar);
