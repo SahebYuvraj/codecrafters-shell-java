@@ -1,4 +1,5 @@
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -10,6 +11,7 @@ public class Main {
     ✔ avoids creating objects unnecessarily
     ✔ makes constants accessible everywhere cleanly
     ✔ shows conceptually this value is global to the shell
+    static means: this belongs to the CLASS, not to an OBJECT one for all
     */
 
     /*
@@ -26,6 +28,7 @@ public class Main {
     private static final String PWD_COMMAND = "pwd";
     private static final String CD_COMMAND = "cd";
     private static final List<String> shellBullitin = List.of(PWD_COMMAND,EXIT_COMMAND,ECHO_COMMAND,TYPE_COMMAND,CD_COMMAND);
+    private boolean INSIDE_SINGLE_QUOTE = false;
    
 
     public static void main(String[] args) throws Exception {
@@ -38,7 +41,9 @@ public class Main {
             // Read user input -- all inputs are treated as unknown commands
             Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim();
-            String[] commandParts = input.split(" ");
+
+            String[] commandParts = parsecommand(input);
+            // String[] commandParts = input.split(" ");
             String command = commandParts[0];
 
             // Evaluate command
@@ -164,16 +169,8 @@ public class Main {
         String path = commandParts[1];
 
         if(path.startsWith("~") || path.startsWith("~/")){
-            // path = System.getProperty("user.home") ;}
             String home = System.getenv("HOME");
-            // if (home == null) {
-            //     System.out.println("cd: HOME not set");
-            //     return;
-            // }
             path = home + path.substring(1);}
-        
-            // expand ~ to home directory this would fail in java since it doesnt expand to home env vairable
-
         if (new File(path).isAbsolute()) {
             target = new File(path);
         }
@@ -194,6 +191,37 @@ public class Main {
         catch (Exception e){
             System.out.println("cd: error changing directory: " + e.getMessage()); 
         }
+    }
+
+    private static String[] parsecommand(String input){
+        List<String> parts = new ArrayList<>();
+        StringBuilder currentPart = new StringBuilder();
+        boolean insideSingleQuote = false;
+
+        for(int i= 0; i < input.length(); i++){
+            char c = input.charAt(i);
+
+            if(c == '\''){
+                insideSingleQuote = !insideSingleQuote;
+                continue;
+            }
+
+            if(c == ' ' && !insideSingleQuote){
+                if(currentPart.length() > 0){
+                    parts.add(currentPart.toString());
+                    currentPart.setLength(0);
+                }
+            } else {
+                currentPart.append(c);
+            }
+        }
+        // TO DO: implement parsing logic to handle quotes and escapes
+
+        if(currentPart.length() > 0){
+            parts.add(currentPart.toString());
+        }
+
+        return parts.toArray(new String[0]);
     }
    
 }
