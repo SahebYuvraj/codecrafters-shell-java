@@ -236,12 +236,8 @@ public class Main {
         StringBuilder currentPart = new StringBuilder();
         boolean insideSingleQuote = false;
         boolean insideDoubleQuote = false;
-        boolean redirectStdout = false;
-        String redirectFile = null;
-        boolean redirectStderr = false;
-        String stderrFile = null;
-        boolean appendStdout = false;
-        boolean appendStderr = false;
+
+        ParsedCommand pc = new ParsedCommand();
 
         for(int i= 0; i < input.length(); i++){
             char c = input.charAt(i);
@@ -261,7 +257,8 @@ public class Main {
             }
 
             if (!insideDoubleQuote && !insideSingleQuote && (c == '2' && i + 1 < input.length() && input.charAt(i + 1) == '>')){
-                redirectStderr = true;
+                // redirectStderr = true;
+                pc.redirectStderr = true;
                  // skip '>'
                 if (currentPart.length() > 0) {
                     parts.add(currentPart.toString());
@@ -271,7 +268,8 @@ public class Main {
                 i++;
                 i++;
                 if (i < input.length() && input.charAt(i) == '>') {
-                    appendStderr = true;
+                    // appendStderr = true;
+                    pc.appendStderr = true;
                     i++; // skip second '>'
                 }
                 
@@ -283,7 +281,8 @@ public class Main {
                     i++;
                 }
 
-                stderrFile = file.toString();
+                // stderrFile = file.toString();
+                pc.stderrFile = file.toString();
                 break;
 
                 
@@ -291,11 +290,14 @@ public class Main {
             if (!insideSingleQuote && !insideDoubleQuote &&
                     (c == '>' || (c == '1' && i + 1 < input.length() && input.charAt(i + 1) == '>'))) {
 
-                redirectStdout = true;
+                // redirectStdout = true;
+                pc.redirectStdout = true;
+                 // skip '>'
                 if (c == '1') i++;
 
                 if (i + 1 < input.length() && input.charAt(i + 1) == '>') {
-                appendStdout = true;
+                // appendStdout = true;
+                pc.appendStdout = true;
                 i++; // skip second '>'
                 }
 
@@ -313,7 +315,8 @@ public class Main {
                     i++;
                 }
 
-                redirectFile = file.toString();
+                // redirectFile = file.toString();
+                pc.redirectFile = file.toString();
                 break;
             }
 
@@ -347,20 +350,12 @@ public class Main {
 
             
         }
-        // TO DO: implement parsing logic to handle quotes and escapes
 
         if(currentPart.length() > 0){
             parts.add(currentPart.toString());
         }
 
-        ParsedCommand pc = new ParsedCommand();
         pc.args = parts.toArray(new String[0]);
-        pc.redirectStdout = redirectStdout;
-        pc.redirectFile = redirectFile;
-        pc.redirectStderr = redirectStderr;
-        pc.stderrFile = stderrFile;
-        pc.appendStdout = appendStdout;
-        pc.appendStderr = appendStderr;
         return pc;
     }
    
