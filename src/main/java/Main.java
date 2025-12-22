@@ -10,7 +10,9 @@ public class Main {
     static class ParsedCommand{
         String[] args;
         boolean redirectStdout;
+        boolean redirectStderr;
         String redirectFile;
+        String stderrFile;
     }
 
     /*
@@ -56,8 +58,12 @@ public class Main {
             String command = commandParts[0];
 
             PrintStream out = System.out;
+            PrintStream err = System.err;
             if (parsed.redirectStdout) {
                 out = new PrintStream(new FileOutputStream(parsed.redirectFile));
+            }
+            if (parsed.redirectStderr) {
+                err = new PrintStream(new FileOutputStream(parsed.stderrFile));
             }
 
             // Evaluate command
@@ -79,7 +85,7 @@ public class Main {
                     cd_command(commandParts);
                     break;
                 default:
-                    externalCommand(commandParts,out);
+                    externalCommand(commandParts,out,err);
                     break;
             }
             
@@ -142,7 +148,7 @@ public class Main {
         }
     }
     
-    private static void externalCommand(String[] commandParts, PrintStream out){
+    private static void externalCommand(String[] commandParts, PrintStream out, PrintStream err){
 
         String executable = commandParts[0];
         String pathEnv = System.getenv("PATH"); // im assuming this gets path from 
@@ -157,7 +163,7 @@ public class Main {
                     Process process = Runtime.getRuntime().exec(commandParts);
                     //output this
                     process.getInputStream().transferTo(out);
-                    process.getErrorStream().transferTo(System.err);
+                    process.getErrorStream().transferTo(err);
 
                     process.waitFor();
                     return;
@@ -259,7 +265,30 @@ public class Main {
                 redirectFile = file.toString();
                 break;
             }
-            
+
+            if (!insideDoubleQuote && !insideSingleQuote && (c == '2' && i + 1 < input.length() && input.charAt(i + 1) == '>')){
+                redirectStderr = true;
+                i++; // skip '>'
+                while (i < input.length() && input.charAt(i) == ' ') i++;
+
+               
+                if (currentPart.length() > 0) {
+                    parts.add(currentPart.toString());
+                    currentPart.setLength(0);
+                }
+
+                StringBuilder file = new StringBuilder();
+                while (i < input.length() && input.charAt(i) != ' ') {
+                    file.append(input.charAt(i));
+                    i++;
+                }
+
+                stderrFile = file.toString();
+                break;
+
+                
+            }
+
             // basically check / escape character
             if(c == '\\'){
                 if(i + 1 < input.length()){
