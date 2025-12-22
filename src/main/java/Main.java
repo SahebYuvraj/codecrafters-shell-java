@@ -43,13 +43,13 @@ public class Main {
     public static void main(String[] args) throws Exception {
         // REPL - read eval print loop
 
-        
+        Scanner scanner = new Scanner(System.in);
         while(true){
             // Display prompt
             System.out.print(PROMPT);
 
             // Read user input -- all inputs are treated as unknown commands
-            Scanner scanner = new Scanner(System.in);
+            
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) continue;
 
@@ -121,7 +121,8 @@ public class Main {
 
     private static void typeCommand(String[] commandParts, PrintStream out, PrintStream err){
         if (commandParts.length != 2) {
-            System.out.println("type: invalid number of arguments");
+            // System.out.println("type: invalid number of arguments");
+            err.println("type: invalid number of arguments");
             return;
         }
         String secondaryCommand = commandParts[1];
