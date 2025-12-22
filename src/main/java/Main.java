@@ -47,7 +47,7 @@ public class Main {
             System.out.print(PROMPT);
 
             // Read user input -- all inputs are treated as unknown commands
-            
+            Scanner scanner = new Scanner(System.in);
             String input = scanner.nextLine().trim();
             if (input.isEmpty()) continue;
 
