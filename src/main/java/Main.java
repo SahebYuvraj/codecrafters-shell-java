@@ -236,7 +236,30 @@ public class Main {
                 insideDoubleQuote = !insideDoubleQuote;
                 continue;
             }
+            if (!insideSingleQuote && !insideDoubleQuote &&
+                    (c == '>' || (c == '1' && i + 1 < input.length() && input.charAt(i + 1) == '>'))) {
 
+                redirectStdout = true;
+                if (c == '1') i++;
+
+                if (currentPart.length() > 0) {
+                    parts.add(currentPart.toString());
+                    currentPart.setLength(0);
+                }
+
+                i++;
+                while (i < input.length() && input.charAt(i) == ' ') i++;
+
+                StringBuilder file = new StringBuilder();
+                while (i < input.length() && input.charAt(i) != ' ') {
+                    file.append(input.charAt(i));
+                    i++;
+                }
+
+                redirectFile = file.toString();
+                break;
+            }
+            
             // basically check / escape character
             if(c == '\\'){
                 if(i + 1 < input.length()){
@@ -263,29 +286,7 @@ public class Main {
                 currentPart.append(c);
             }
 
-            if (!insideSingleQuote && !insideDoubleQuote &&
-                    (c == '>' || (c == '1' && i + 1 < input.length() && input.charAt(i + 1) == '>'))) {
-
-                redirectStdout = true;
-                if (c == '1') i++;
-
-                if (currentPart.length() > 0) {
-                    parts.add(currentPart.toString());
-                    currentPart.setLength(0);
-                }
-
-                i++;
-                while (i < input.length() && input.charAt(i) == ' ') i++;
-
-                StringBuilder file = new StringBuilder();
-                while (i < input.length() && input.charAt(i) != ' ') {
-                    file.append(input.charAt(i));
-                    i++;
-                }
-
-                redirectFile = file.toString();
-                break;
-            }
+            
         }
         // TO DO: implement parsing logic to handle quotes and escapes
 
