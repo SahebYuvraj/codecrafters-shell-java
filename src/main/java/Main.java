@@ -166,7 +166,10 @@ public class Main {
             if(commandFile.exists() && commandFile.canExecute()){
                 try {
 
-                    Process process = Runtime.getRuntime().exec(commandParts);
+                    String[] execArgs = commandParts.clone();
+                    execArgs[0] = commandFile.getAbsolutePath();
+                    Process process = Runtime.getRuntime().exec(execArgs);
+                    // Process process = Runtime.getRuntime().exec(commandParts);
                     //output this
                     process.getInputStream().transferTo(out);
                     process.getErrorStream().transferTo(err);
@@ -274,7 +277,7 @@ public class Main {
                 }
 
                 stderrFile = file.toString();
-                break;
+                continue;
 
                 
             }
