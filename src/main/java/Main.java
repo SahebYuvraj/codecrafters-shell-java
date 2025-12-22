@@ -76,7 +76,7 @@ public class Main {
                     echoCommand(commandParts, out);
                     break;
                 case TYPE_COMMAND:
-                    typeCommand(commandParts, out);
+                    typeCommand(commandParts, out, err);
                     break;
                 case PWD_COMMAND:
                     pwd_command(out);
@@ -115,7 +115,7 @@ public class Main {
         out.println(message.toString());
     }
 
-    private static void typeCommand(String[] commandParts, PrintStream out){
+    private static void typeCommand(String[] commandParts, PrintStream out, PrintStream err){
         if (commandParts.length != 2) {
             System.out.println("type: invalid number of arguments");
             return;
@@ -143,7 +143,8 @@ public class Main {
                 }
             }
             // System.out.println(secondaryCommand + ": not found");
-            out.println(secondaryCommand + ": not found");
+            // out.println(secondaryCommand + ": not found");
+            err.println(secondaryCommand + ": not found");
             
         }
     }
@@ -175,7 +176,8 @@ public class Main {
             }
         }
 
-        System.out.println(executable + ": command not found");         
+        // System.out.println(executable + ": command not found");   
+        err.println(executable + ": command not found");      
     }
 
     private static void  pwd_command(PrintStream out){
