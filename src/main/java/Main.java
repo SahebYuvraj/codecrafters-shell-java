@@ -70,7 +70,7 @@ public class Main {
             switch (command) {
                 case EXIT_COMMAND:
                     // need to write logic to check if its the only work in the list
-                    exitCommand(commandParts);
+                    exitCommand(commandParts, err);
                     break; 
                 case ECHO_COMMAND:
                     echoCommand(commandParts, out);
@@ -82,7 +82,7 @@ public class Main {
                     pwd_command(out);
                     break;
                 case CD_COMMAND:
-                    cd_command(commandParts);
+                    cd_command(commandParts, err);
                     break;
                 default:
                     externalCommand(commandParts,out,err);
@@ -94,9 +94,10 @@ public class Main {
     }
    
 
-    private static void exitCommand(String[] commandParts) {
+    private static void exitCommand(String[] commandParts, PrintStream err){ 
         if (commandParts.length > 1) {
-            System.out.println("exit: too many arguments");
+            // System.out.println("exit: too many arguments");
+            err.println("exit: too many arguments");
             return;
         }
         System.exit(0);
@@ -186,10 +187,11 @@ public class Main {
         out.println(System.getProperty("user.dir"));
     }
 
-    private static void cd_command(String[] commandParts){
+    private static void cd_command(String[] commandParts, PrintStream err){
         File target;
         if(commandParts.length != 2){
-            System.out.println("cd: invalid number of arguments");
+            // System.out.println("cd: invalid number of arguments");
+            err.println("cd: invalid number of arguments");
             return;
         }
 
@@ -209,14 +211,17 @@ public class Main {
         try{
             File CanonicalFile = target.getCanonicalFile();
             if(!CanonicalFile.exists() || !CanonicalFile.isDirectory()){
-                System.out.println("cd: no such file or directory: " + path);
+                // System.out.println("cd: no such file or directory: " + path);
+                err.println("cd: no such file or directory: " + path);
                 return;
             
             }
             System.setProperty("user.dir", CanonicalFile.getAbsolutePath());
         } 
         catch (Exception e){
-            System.out.println("cd: error changing directory: " + e.getMessage()); 
+            // System.out.println("cd: error changing directory: " + e.getMessage()); 
+            err.println("cd: error changing directory: " + e.getMessage());
+            return;
         }
     }
 
