@@ -3,8 +3,6 @@ import java.io.FileOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
-
 public class Main {
 
     static class ParsedCommand{
@@ -15,6 +13,20 @@ public class Main {
         boolean appendStderr;
         String redirectFile;
         String stderrFile;
+    }
+
+    private static void setTerminalRawMode() {
+        String[] cmd = {"/bin/sh", "-c", "stty -echo -icanon min 1 < /dev/tty"};
+        try {
+            Runtime.getRuntime().exec(cmd).waitFor();
+        } catch (Exception ignored) {}
+    }
+
+    private static void restoreTerminalMode() {
+        String[] cmd = {"/bin/sh", "-c", "stty sane < /dev/tty"};
+        try {
+            Runtime.getRuntime().exec(cmd).waitFor();
+        } catch (Exception ignored) {}
     }
 
     /*
@@ -44,31 +56,97 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         // REPL - read eval print loop
+        setTerminalRawMode();
+        Runtime.getRuntime().addShutdownHook(new Thread(Main::restoreTerminalMode));
 
-        Scanner scanner = new Scanner(System.in);
+        StringBuilder buffer = new StringBuilder();
+        System.out.print(PROMPT);
+        System.out.flush();
+
+
         while(true){
-            // Display prompt
-            System.out.print(PROMPT);
-
-            // Read user input -- all inputs are treated as unknown commands
+            int ch  = System.in.read();
+            if (ch == -1) break;
+            if (ch == '\n' || ch == '\r'){
+                System.out.print("\r\n");
+                System.out.flush();
             
-            String input = scanner.nextLine().trim();
-            if (input.isEmpty()) continue;
+
+            String input = buffer.toString().trim();
+            buffer.setLength(0);
+
+            // if empty line, just show prompt again
+            if (input.isEmpty()) {
+                System.out.print(PROMPT);
+                System.out.flush();
+                continue;
+            }
+            runOneCommandLine(input);
+
+            // show prompt for next command
+            System.out.print(PROMPT);
+            System.out.flush();
+            continue;
+        }
+         if (ch == '\t' ){
+            if (buffer.indexOf(" ") == -1) {
+            String s = buffer.toString();
+             if ("echo".startsWith(s) && !s.equals("echo")) {
+                buffer.setLength(0);
+                buffer.append("echo ");
+            } else if ("exit".startsWith(s) && !s.equals("exit")) {
+                buffer.setLength(0);
+                buffer.append("exit ");
+            }
+            System.out.print("\r\033[2K");
+            System.out.print(PROMPT);
+            System.out.print(buffer);
+            System.out.flush();
+         }
+            continue;
+
+        }
+         if (ch == 127 || ch == 8){ // backspace or delete
+            if (buffer.length() > 0){
+                buffer.setLength(buffer.length() - 1);
+                System.out.print("\b \b");
+                System.out.flush();
+            }
+            continue;
+        }
+
+        if(ch >= 32){
+            buffer.append((char) ch);
+            System.out.print((char) ch);
+            System.out.flush();
+        }
+    }
+}
+
+    private static void runOneCommandLine(String input) throws Exception {
+
 
             ParsedCommand parsed = parseCommand(input);
+            if (parsed.args.length == 0) return; 
             String[] commandParts = parsed.args;
             String command = commandParts[0];
 
-            PrintStream out = System.out;
-            PrintStream err = System.err;
-            if (parsed.redirectStdout) {
-                out = new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout));
-            }
-            if (parsed.redirectStderr) {
-                err = new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr));
-            }
+            // PrintStream out = System.out;
+            // PrintStream err = System.err;
+
+            // if (parsed.redirectStdout) {
+            //     out = new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout));
+            // }
+            // if (parsed.redirectStderr) {
+            //     err = new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr));
+            // }
+
+            PrintStream out = parsed.redirectStdout ? new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout)) : System.out;
+            PrintStream err = parsed.redirectStderr ? new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr)) : System.err;
+
 
             // Evaluate command
+            try{
             switch (command) {
                 case EXIT_COMMAND:
                     // need to write logic to check if its the only work in the list
@@ -90,19 +168,21 @@ public class Main {
                     externalCommand(commandParts,out,err);
                     break;
             }
-            out.flush();
-            err.flush();
-            if (out != System.out) {out.close();}
-            if (err != System.err) {err.close();}
+            } catch (Exception e){
+                err.println("Error executing command: " + e.getMessage());
+            }
+            finally{
+                out.flush();
+                err.flush();
+                if (out != System.out) {out.close();}
+                if (err != System.err) {err.close();}
+            }
             
         }
       
-    }
    
-
     private static void exitCommand(String[] commandParts, PrintStream err){ 
         if (commandParts.length > 1) {
-            // System.out.println("exit: too many arguments");
             err.println("exit: too many arguments");
             return;
         }
@@ -160,13 +240,19 @@ public class Main {
     private static void externalCommand(String[] commandParts, PrintStream out, PrintStream err){
 
         String executable = commandParts[0];
-        String pathEnv = System.getenv("PATH"); // im assuming this gets path from 
-        String[] paths = pathEnv.split(System.getProperty("path.separator"));
+        // String pathEnv = System.getenv("PATH"); // im assuming this gets path from 
+        // String[] paths = pathEnv.split(System.getProperty("path.separator"));
 
-        for(String path:paths){
-            File dir = new File(path);
-            File commandFile = new File (dir, commandParts[0]);
-            if(commandFile.exists() && commandFile.canExecute()){
+        // for(String path:paths){
+        //     File dir = new File(path);
+        //     File commandFile = new File (dir, commandParts[0]);
+        //     if(commandFile.exists() && commandFile.canExecute()){
+
+        File commandFile = findExecutableFile(executable);
+        if(commandFile == null){
+            err.println(executable + ": command not found");
+            return;
+        } else {
                 try {
                     Process process = Runtime.getRuntime().exec(commandParts);
                     //output this
@@ -177,15 +263,15 @@ public class Main {
                     return;
  
                 } catch (Exception e) {
-                    System.err.println(e.getMessage());
+                    err.println(e.getMessage());
                     return;
                 }
             }
         }
 
-        // System.out.println(executable + ": command not found");   
-        err.println(executable + ": command not found");      
-    }
+    //     // System.out.println(executable + ": command not found");   
+    //     err.println(executable + ": command not found");      
+    // }
 
     private static void  pwd_command(PrintStream out){
         // so the shell always has a current working directory tracked by the OS.
@@ -236,8 +322,12 @@ public class Main {
         StringBuilder currentPart = new StringBuilder();
         boolean insideSingleQuote = false;
         boolean insideDoubleQuote = false;
-
-        ParsedCommand pc = new ParsedCommand();
+        boolean redirectStdout = false;
+        String redirectFile = null;
+        boolean redirectStderr = false;
+        String stderrFile = null;
+        boolean appendStdout = false;
+        boolean appendStderr = false;
 
         for(int i= 0; i < input.length(); i++){
             char c = input.charAt(i);
@@ -257,8 +347,7 @@ public class Main {
             }
 
             if (!insideDoubleQuote && !insideSingleQuote && (c == '2' && i + 1 < input.length() && input.charAt(i + 1) == '>')){
-                // redirectStderr = true;
-                pc.redirectStderr = true;
+                redirectStderr = true;
                  // skip '>'
                 if (currentPart.length() > 0) {
                     parts.add(currentPart.toString());
@@ -268,8 +357,7 @@ public class Main {
                 i++;
                 i++;
                 if (i < input.length() && input.charAt(i) == '>') {
-                    // appendStderr = true;
-                    pc.appendStderr = true;
+                    appendStderr = true;
                     i++; // skip second '>'
                 }
                 
@@ -281,8 +369,7 @@ public class Main {
                     i++;
                 }
 
-                // stderrFile = file.toString();
-                pc.stderrFile = file.toString();
+                stderrFile = file.toString();
                 break;
 
                 
@@ -290,14 +377,11 @@ public class Main {
             if (!insideSingleQuote && !insideDoubleQuote &&
                     (c == '>' || (c == '1' && i + 1 < input.length() && input.charAt(i + 1) == '>'))) {
 
-                // redirectStdout = true;
-                pc.redirectStdout = true;
-                 // skip '>'
+                redirectStdout = true;
                 if (c == '1') i++;
 
                 if (i + 1 < input.length() && input.charAt(i + 1) == '>') {
-                // appendStdout = true;
-                pc.appendStdout = true;
+                appendStdout = true;
                 i++; // skip second '>'
                 }
 
@@ -315,8 +399,7 @@ public class Main {
                     i++;
                 }
 
-                // redirectFile = file.toString();
-                pc.redirectFile = file.toString();
+                redirectFile = file.toString();
                 break;
             }
 
@@ -350,13 +433,35 @@ public class Main {
 
             
         }
+        // TO DO: implement parsing logic to handle quotes and escapes
 
         if(currentPart.length() > 0){
             parts.add(currentPart.toString());
         }
 
+        ParsedCommand pc = new ParsedCommand();
         pc.args = parts.toArray(new String[0]);
+        pc.redirectStdout = redirectStdout;
+        pc.redirectFile = redirectFile;
+        pc.redirectStderr = redirectStderr;
+        pc.stderrFile = stderrFile;
+        pc.appendStdout = appendStdout;
+        pc.appendStderr = appendStderr;
         return pc;
+    }
+
+    private static File findExecutableFile(String command){
+        String pathEnv = System.getenv("PATH");
+        String[] paths = pathEnv.split(System.getProperty("path.separator"));
+
+        for (String path : paths) {
+            File dir = new File(path);
+            File commandFile = new File(dir, command);
+            if(commandFile.exists() && commandFile.canExecute()){
+                return commandFile;
+            }
+        }
+        return null;
     }
    
 }
