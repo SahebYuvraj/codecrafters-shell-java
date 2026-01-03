@@ -155,7 +155,9 @@ public class Main {
                 if (!tabPending || tabPrefix == null || !tabPrefix.equals(s)) {
                     tabPending = true;
                     tabPrefix = s;
-                    tabMatches = matches; // cache sorted list
+                    
+                     tabMatches.clear();
+                    tabMatches.addAll(matches);
 
                     System.out.print("\u0007");
                     System.out.flush();
