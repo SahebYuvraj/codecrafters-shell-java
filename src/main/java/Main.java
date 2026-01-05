@@ -31,6 +31,18 @@ public class Main {
         String stderrFile;
     }
 
+    static class ShellState {
+    boolean tabPending = false;
+    String tabPrefix = null;
+    List<String> tabMatches = null;
+
+    void resetTab() {
+        tabPending = false;
+        tabPrefix = null;
+        tabMatches = null;
+    } 
+    }
+
     private static void setTerminalRawMode() {
         String[] cmd = {"/bin/sh", "-c", "stty -echo -icanon min 1 < /dev/tty"};
         try {
@@ -61,6 +73,7 @@ public class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(Main::restoreTerminalMode));
 
         StringBuilder buffer = new StringBuilder();
+        ShellState state = new ShellState();  
         System.out.print(PROMPT);
         System.out.flush();
 
@@ -73,135 +86,43 @@ public class Main {
             int ch  = System.in.read();
             if (ch == -1) break;
             if (ch == '\n' || ch == '\r'){
-                System.out.print("\r\n");
-                System.out.flush();
-
-            
-
-            String input = buffer.toString().trim();
-            buffer.setLength(0);
-            tabPending = false;
-            tabPrefix = null;
-            tabMatches.clear();
-
-
-            // if empty line, just show prompt again
-            if (input.isEmpty()) {
-                System.out.print(PROMPT);
-                System.out.flush();
+                handleEnter(buffer, state);
                 continue;
             }
-            runOneCommandLine(input);
+            if (ch == '\t' ){
+                if (buffer.indexOf(" ") == -1) {
+                boolean doneSomethingVisible = handleTab(buffer, state);
 
-            // show prompt for next command
-            System.out.print(PROMPT);
-            System.out.flush();
-            continue;
-        }
-         if (ch == '\t' ){
-            if (buffer.indexOf(" ") == -1) {
-            String s = buffer.toString();
-            boolean completed = false;
-
-             if ("echo".startsWith(s) && !s.equals("echo")) {
-                buffer.setLength(0);
-                buffer.append("echo ");
-                completed = true;
-            } else if ("exit".startsWith(s) && !s.equals("exit")) {
-                buffer.setLength(0);
-                buffer.append("exit ");
-                completed = true;
-            }
-            if (completed) {
-                System.out.print("\r\033[2K");
-                System.out.print(PROMPT);
-                System.out.print(buffer);
-                System.out.flush();
-
-                tabPending = false;
-                tabPrefix = null;
-                tabMatches.clear();
-                continue;
-            }
-            else{
-                List<String> matches = findExecutableCompletion(s);
-
-                 if (matches.isEmpty()) {
-                    // no matches -> bell
-                    System.out.print("\u0007");
+                if (!doneSomethingVisible) {
+                    System.out.print("\007");
                     System.out.flush();
-
-                    tabPending = false;
-                    tabPrefix = null;
-                    tabMatches.clear();
-                    continue;
-                }
-
-                if (matches.size() == 1) {
-                    // single match -> complete immediately
-                    buffer.setLength(0);
-                    buffer.append(matches.get(0)).append(" ");
-
+                } else {
+                    // only redraw if buffer changed due to single completion
+                    // BUT: we can't distinguish “second-tab printed list” vs “single completion”
+                    // easiest fix: have handleTab return an enum-like int (see below)
                     System.out.print("\r\033[2K");
                     System.out.print(PROMPT);
                     System.out.print(buffer);
                     System.out.flush();
-
-                    tabPending = false;
-                    tabPrefix = null;
-                    tabMatches.clear();
-                    continue;
                 }
-                if (!tabPending || tabPrefix == null || !tabPrefix.equals(s)) {
-                    tabPending = true;
-                    tabPrefix = s;
-                    
-                     tabMatches.clear();
-                    tabMatches.addAll(matches);
-
-                    System.out.print("\u0007");
-                    System.out.flush();
-                    continue;
-                }
-
-                // second TAB (same prefix): print list, then re-show prompt + prefix
-                System.out.print("\r\n");
-                System.out.print(String.join("  ", tabMatches));
-                System.out.print("\r\n");
-                System.out.print(PROMPT);
-                System.out.print(tabPrefix);
-                System.out.flush();
-
-                // reset after printing
-                tabPending = false;
-                tabPrefix = null;
-                tabMatches.clear();
-            }
-
-            continue;
-
-        }
-         if (ch == 127 || ch == 8){ // backspace or delete
-            if (buffer.length() > 0){
-                buffer.setLength(buffer.length() - 1);
-                tabPending = false;
-                tabPrefix = null;
-                tabMatches.clear();
-                System.out.print("\b \b");
+            } else {
+                System.out.print("\007");
                 System.out.flush();
             }
             continue;
-        }
 
-        if(ch >= 32){
-            buffer.append((char) ch);
-            tabPending = false;
-            tabPrefix = null;
-            tabMatches.clear();
-            System.out.print((char) ch);
-            System.out.flush();
-        }
-        }
+            }
+            if (ch == 127 || ch == 8){ // backspace or delete
+                handleBackSpace(buffer, state);
+                continue;
+            }
+
+            if(ch >= 32){
+                state.resetTab();
+                buffer.append((char) ch);
+                System.out.print((char) ch);
+                System.out.flush();
+            }
     }
 }
 
@@ -212,16 +133,6 @@ public class Main {
             if (parsed.args.length == 0) return; 
             String[] commandParts = parsed.args;
             String command = commandParts[0];
-
-            // PrintStream out = System.out;
-            // PrintStream err = System.err;
-
-            // if (parsed.redirectStdout) {
-            //     out = new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout));
-            // }
-            // if (parsed.redirectStderr) {
-            //     err = new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr));
-            // }
 
             PrintStream out = parsed.redirectStdout ? new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout)) : System.out;
             PrintStream err = parsed.redirectStderr ? new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr)) : System.err;
@@ -562,12 +473,94 @@ public class Main {
             if (f.isFile()
                 && f.canExecute()
                 && f.getName().startsWith(prefix)) {
-                matches.add(f.getName());
+                String name = f.getName();
+                if (name.startsWith(prefix)) matches.add(name);
             }
         }
     }
-    matches.sort(String::compareTo);
     return matches;
 }
-   
+
+    private static void handleEnter(StringBuilder buffer, ShellState state){
+        state.resetTab();
+        System.out.print("\r\n");
+        System.out.flush();
+
+        String input = buffer.toString().trim();
+        buffer.setLength(0);
+
+            // if empty line, just show prompt again
+        if (!input.isEmpty()) 
+            {
+            try { runOneCommandLine(input);} 
+            catch (Exception e) { System.err.println("Error: " + e.getMessage());}
+            }
+            // show prompt for next command
+        System.out.print(PROMPT);
+        System.out.flush();
+    }
+
+    private static boolean handleTab(StringBuilder buffer, ShellState state){
+            String prefix = buffer.toString();
+
+            if ("echo".startsWith(prefix) && !prefix.equals("echo")) {
+                buffer.setLength(0);
+                buffer.append("echo ");
+                state.resetTab();
+                return true;
+        
+            } 
+            if ("exit".startsWith(prefix) && !prefix.equals("exit")) {
+                buffer.setLength(0);
+                buffer.append("exit ");
+                state.resetTab();
+                return true;
+            }
+             List<String> matches = findExecutableCompletion(prefix);
+
+            if (matches.isEmpty()) {
+                state.resetTab();
+                return false; // main will bell
+            }
+
+            if (matches.size() == 1) {
+            buffer.setLength(0);
+            buffer.append(matches.get(0)).append(" ");
+            state.resetTab();
+            return true;
+            }
+
+            boolean samePrefix = state.tabPending && prefix.equals(state.tabPrefix);
+
+            if (!samePrefix) {
+                state.tabPending = true;
+                state.tabPrefix = prefix;
+                state.tabMatches = matches;
+            }
+
+            System.out.print("\r\n");
+            for (int i = 0; i < state.tabMatches.size(); i++) {
+                if (i > 0) System.out.print("  "); // two spaces
+                System.out.print(state.tabMatches.get(i));
+            }
+            // System.out.print("\r\n");
+            // System.out.print(PROMPT);
+            // System.out.print(prefix);
+            // System.out.flush();
+
+            state.resetTab();
+            return true;
+
+        
+    }
+    
+
+    private static void handleBackSpace(StringBuilder buffer, ShellState state){
+        state.resetTab();
+        if (buffer.length() > 0){
+            buffer.setLength(buffer.length() - 1);
+            System.out.print("\b \b");
+            System.out.flush();
+        }
+    }
 }
