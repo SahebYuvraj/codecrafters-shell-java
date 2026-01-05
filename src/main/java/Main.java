@@ -536,6 +536,7 @@ public class Main {
                 state.tabPending = true;
                 state.tabPrefix = prefix;
                 state.tabMatches = matches;
+                return false; // main will bell
             }
 
             System.out.print("\r\n");
