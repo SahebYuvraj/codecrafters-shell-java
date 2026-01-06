@@ -1,9 +1,15 @@
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+
+// a good read for pipes and forks https://beej.us/guide/bgipc/
 public class Main {
 
 /*
@@ -134,6 +140,10 @@ public class Main {
             PrintStream out = parsed.redirectStdout ? new PrintStream(new FileOutputStream(parsed.redirectFile, parsed.appendStdout)) : System.out;
             PrintStream err = parsed.redirectStderr ? new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr)) : System.err;
 
+            if (input.contains("|")) {
+                runPipelineTwoCommands(input, out, err);
+                return;
+            }
 
             // Evaluate command
             try{
@@ -560,7 +570,6 @@ public class Main {
         
     }
     
-
     private static void handleBackSpace(StringBuilder buffer, ShellState state){
         state.resetTab();
         if (buffer.length() > 0){
@@ -584,5 +593,62 @@ public class Main {
             if (prefix.isEmpty()) break;
         }
         return prefix;
+    }
+
+    private static Thread pump(InputStream in, OutputStream out, boolean closeOut) {
+    Thread t = new Thread(() -> {
+        byte[] buf = new byte[8192];
+        int n;
+        try {
+            while ((n = in.read(buf)) != -1) {
+                out.write(buf, 0, n);
+                out.flush();
+            }
+        } catch (IOException ignored) {
+        } finally {
+            try { in.close(); } catch (IOException ignored) {}
+            if (closeOut) {
+                try { out.close(); } catch (IOException ignored) {}
+            }
+        }
+    });
+    t.start();
+    return t;
+}
+    private static void runPipelineTwoCommands(String input, PrintStream out, PrintStream err) throws Exception {
+        String[] commandParts = input.split("\\|", 2);
+        if (commandParts.length != 2) {
+            err.println("Invalid pipeline command");
+            return;
+        }
+
+        ParsedCommand parsed1 = parseCommand(commandParts[0].trim());
+        ParsedCommand parsed2 = parseCommand(commandParts[1].trim());
+
+        ProcessBuilder pb1 = new ProcessBuilder(parsed1.args);
+        ProcessBuilder pb2 = new ProcessBuilder(parsed2.args);
+
+        pb1.directory(new File(System.getProperty("user.dir")));
+        pb2.directory(new File(System.getProperty("user.dir")));
+
+        Process p1 = pb1.start();
+        Process p2 = pb2.start();
+
+        Thread t1 = pump(p1.getInputStream(), p2.getOutputStream(), true);
+        Thread t2 = pump(p1.getErrorStream(), err, false);
+        Thread t3 = pump(p2.getErrorStream(), err, false);
+        Thread t4 = pump(p2.getInputStream(), out, false);
+
+
+        p1.getOutputStream().close();
+
+        p1.waitFor();
+        p2.getOutputStream().close();
+        p2.waitFor();
+
+        t1.join();
+        t2.join();
+        t3.join();
+        t4.join();
     }
 }
