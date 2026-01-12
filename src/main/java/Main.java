@@ -147,7 +147,7 @@ public class Main {
                     cd_command(commandParts, err);
                     break;
                 case HISTORY_COMMAND:
-                    history_command(out);
+                    history_command(commandParts,out);
                     break;
                 default:
                     externalCommand(commandParts,out,err);
@@ -635,11 +635,26 @@ public class Main {
     }
 }
 
-    private static void history_command(PrintStream out){
-        for (int i = 0; i < HISTORY.size(); i++) {
-        int num = i + 1;
-        out.printf("%5d  %s%n", num, HISTORY.get(i));
-    }
+    private static void history_command(ParsedCommand commandParts, PrintStream out){
+        int i = 0;
+        if (commandParts.args.length > 1) {
+            try {
+                i = Integer.parseInt(commandParts.args[1]);
+                if (i < 1 || i > HISTORY.size()) {
+                    out.println("history: invalid number: " + commandParts.args[1]);
+                    return;
+                }
+               
+            } catch (NumberFormatException e) {
+                out.println("history: invalid number: " + commandParts.args[1]);
+                return;
+            }
+        }
+        int start = Math.max(0, HISTORY.size() - i);
+        for (int j = start; j < HISTORY.size(); j++) {
+            out.println((j + 1) + " " + HISTORY.get(j));
+        }
+    
     }
 
 
