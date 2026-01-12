@@ -119,7 +119,8 @@ public class Main {
             PrintStream err = parsed.redirectStderr ? new PrintStream(new FileOutputStream(parsed.stderrFile, parsed.appendStderr)) : System.err;
 
             if (input.contains("|")) {
-                runPipelineTwoCommands(input, out, err);
+                // runPipelineTwoCommands(input, out, err);
+                runPipeline(input, out, err);
                 return;
             }
 
@@ -568,6 +569,64 @@ public class Main {
             err.println(cmd + ": command not found");
         }
     }
+
+    private static void runPipeline(String input, PrintStream out, PrintStream err) throws Exception {
+    String[] segments = input.split("\\|");
+
+    if (segments.length == 2) {
+    runPipelineTwoCommands(input, out, err);
+    return;
+    }
+    
+    // Parse commands
+    List<ParsedCommand> cmds = new ArrayList<>();
+    for (String seg : segments) {
+        ParsedCommand pc = PARSER.parseCommand(seg.trim());
+        if (pc.args.length == 0) return;
+        cmds.add(pc);
+    }
+
+    // For now (this stage): assume all are external commands
+    // Create all processes first
+    List<Process> procs = new ArrayList<>();
+    for (ParsedCommand pc : cmds) {
+        ProcessBuilder pb = new ProcessBuilder(pc.args);
+        pb.directory(new File(System.getProperty("user.dir")));
+        procs.add(pb.start());
+    }
+
+    // Wire pipes between processes: stdout(i) -> stdin(i+1)
+    List<Thread> threads = new ArrayList<>();
+
+    for (int i = 0; i < procs.size() - 1; i++) {
+        Process a = procs.get(i);
+        Process b = procs.get(i + 1);
+        threads.add(pump(a.getInputStream(), b.getOutputStream(), true));
+    }
+
+    // Forward stderr for ALL processes to shell err
+    for (Process p : procs) {
+        threads.add(pump(p.getErrorStream(), err, false));
+    }
+
+    // Forward stdout of LAST process to shell out
+    Process last = procs.get(procs.size() - 1);
+    threads.add(pump(last.getInputStream(), out, false));
+
+    // Close stdin of FIRST process (we're not feeding it anything)
+    procs.get(0).getOutputStream().close();
+
+    // Wait for processes to finish
+    for (Process p : procs) {
+        p.waitFor();
+    }
+
+    // Wait for all pump threads to finish draining
+    for (Thread t : threads) {
+        t.join();
+    }
+}
+
 
 
 }
