@@ -48,8 +48,11 @@ public class Main {
     private static final String TYPE_COMMAND = "type";
     private static final String PWD_COMMAND = "pwd";
     private static final String CD_COMMAND = "cd";
-    private static final List<String> shellBullitin = List.of(PWD_COMMAND,EXIT_COMMAND,ECHO_COMMAND,TYPE_COMMAND,CD_COMMAND);
+    private static final String HISTORY_COMMAND = "history";
+    private static final List<String> shellBullitin = List.of(PWD_COMMAND,EXIT_COMMAND,ECHO_COMMAND,TYPE_COMMAND,CD_COMMAND,HISTORY_COMMAND);
     private static final Parser PARSER = new Parser();
+    private static final List<String> HISTORY = new ArrayList<>();
+
    
 
     public static void main(String[] args) throws Exception {
@@ -142,6 +145,9 @@ public class Main {
                     break;
                 case CD_COMMAND:
                     cd_command(commandParts, err);
+                    break;
+                case HISTORY_COMMAND:
+                    history_command(out);
                     break;
                 default:
                     externalCommand(commandParts,out,err);
@@ -341,6 +347,7 @@ public class Main {
 
             // if empty line, just show prompt again
         if (!input.isEmpty()) 
+             HISTORY.add(input);
             {
             try { runOneCommandLine(input);} 
             catch (Exception e) { System.err.println("Error: " + e.getMessage());}
@@ -565,6 +572,7 @@ public class Main {
         case TYPE_COMMAND: typeCommand(args, out, err); break;
         case PWD_COMMAND:  pwd_command(out); break;
         case CD_COMMAND:   cd_command(args, err); break;
+        case HISTORY_COMMAND: history_command(out); break;
         default:
             err.println(cmd + ": command not found");
         }
@@ -626,6 +634,13 @@ public class Main {
         t.join();
     }
 }
+
+    private static void history_command(PrintStream out){
+        for (int i = 0; i < HISTORY.size(); i++) {
+        int num = i + 1;
+        out.printf("%5d  %s%n", num, HISTORY.get(i));
+    }
+    }
 
 
 
