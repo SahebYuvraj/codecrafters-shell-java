@@ -572,7 +572,7 @@ public class Main {
         case TYPE_COMMAND: typeCommand(args, out, err); break;
         case PWD_COMMAND:  pwd_command(out); break;
         case CD_COMMAND:   cd_command(args, err); break;
-        case HISTORY_COMMAND: history_command(out); break;
+        case HISTORY_COMMAND: history_command(args,out); break;
         default:
             err.println(cmd + ": command not found");
         }
@@ -635,18 +635,18 @@ public class Main {
     }
 }
 
-    private static void history_command(ParsedCommand commandParts, PrintStream out){
+    private static void history_command(String[] commandParts, PrintStream out){
         int i = 0;
-        if (commandParts.args.length > 1) {
+        if (commandParts.length > 1) {
             try {
-                i = Integer.parseInt(commandParts.args[1]);
+                i = Integer.parseInt(commandParts[1]);
                 if (i < 1 || i > HISTORY.size()) {
-                    out.println("history: invalid number: " + commandParts.args[1]);
+                    out.println("history: invalid number: " + commandParts[1]);
                     return;
                 }
                
             } catch (NumberFormatException e) {
-                out.println("history: invalid number: " + commandParts.args[1]);
+                out.println("history: invalid number: " + commandParts[1]);
                 return;
             }
         }
