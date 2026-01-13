@@ -661,25 +661,59 @@ public class Main {
 }
 
     private static void history_command(String[] commandParts, PrintStream out){
-        int i = HISTORY.size(); // default to all history
-        if (commandParts.length > 1) {
-            try {
+         // default to all history
+        if (commandParts.length == 1) {
+            printAllHistory(out);
+            return;
+        }
+        if (commandParts.length == 2) {
+                printHistory(commandParts, out);
+                return;
+           }
+        
+        if (commandParts.length == 3 && commandParts[1].equals("-r")) {
+            readHistoryFromFile(commandParts[2]);
+            return;
+        }
+    }
+    private static void printAllHistory(PrintStream out) {
+    for (int j = 0; j < HISTORY.size(); j++) {
+        out.printf("%5d  %s%n", j + 1, HISTORY.get(j));
+    }
+    }
+
+    private static void readHistoryFromFile(String filename) {
+        File file = new File(filename);
+        if (!file.exists() || !file.isFile()) {
+            System.err.println("history: file not found: " + filename);
+            return;
+        }
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                HISTORY.add(line);
+            }
+        } catch (IOException e) {
+            System.err.println("history: error reading file: " + e.getMessage());
+        }
+    }
+    private static void printHistory(String[] commandParts, PrintStream out) {
+        int i = HISTORY.size();
+        try {
                 i = Integer.parseInt(commandParts[1]);
                 if (i < 1 || i > HISTORY.size()) {
                     out.println("history: invalid number: " + commandParts[1]);
                     return;
                 }
-               
+                int start = Math.max(0, HISTORY.size() - i);
+                for (int j = start; j < HISTORY.size(); j++) {
+                out.println((j + 1) + " " + HISTORY.get(j));
+                }
             } catch (NumberFormatException e) {
                 out.println("history: invalid number: " + commandParts[1]);
                 return;
             }
-        }
-        int start = Math.max(0, HISTORY.size() - i);
-        for (int j = start; j < HISTORY.size(); j++) {
-            out.println((j + 1) + " " + HISTORY.get(j));
-        }
-    
+
     }
     private static void redrawLine(StringBuilder buffer) {
         System.out.print("\r\033[2K");     // clear line
