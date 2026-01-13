@@ -54,6 +54,7 @@ public class Main {
     private static final List<String> HISTORY = new ArrayList<>();
     private static int historyCursor = -1;
     private static int historyAppendedUpTo = 0; 
+    
 
 
    
@@ -202,7 +203,7 @@ public class Main {
         }
         String histFile = System.getenv("HISTFILE");
         if (histFile != null) {
-            writeHistoryToFile(histFile);
+            appendHistoryToFile(histFile);
         }
         System.exit(0);
         
