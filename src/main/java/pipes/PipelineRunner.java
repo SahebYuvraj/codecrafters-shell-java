@@ -12,7 +12,7 @@ import java.util.List;
 import parse.ParsedCommand;
 import parse.Parser;
 
-
+// a good read for pipes and forks https://beej.us/guide/bgipc/
 public class PipelineRunner {
 
     //callback via interface
@@ -120,7 +120,6 @@ public class PipelineRunner {
             Thread t2 = pump(p1.getErrorStream(), err, false);
             Thread t3 = pump(p2.getErrorStream(), err, false);
             Thread t4 = pump(p2.getInputStream(), out, false);
-
 
             p1.getOutputStream().close();
 
